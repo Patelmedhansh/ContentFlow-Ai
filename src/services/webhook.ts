@@ -1,11 +1,16 @@
 import { WorkflowPayload } from '../types';
 
-const KESTRA_WEBHOOK_URL = import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'https://ec76-2401-4900-8fc7-ff30-c939-155b-876-8e18.ngrok-free.app/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key';
+// Use Netlify function proxy in production, direct URL in development
+const isDevelopment = import.meta.env.DEV;
+const KESTRA_WEBHOOK_URL = isDevelopment 
+  ? (import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'https://ec76-2401-4900-8fc7-ff30-c939-155b-876-8e18.ngrok-free.app/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key')
+  : '/.netlify/functions/kestra-proxy/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key';
 
 export class WebhookService {
   async sendToKestra(payload: WorkflowPayload): Promise<boolean> {
     try {
       console.log('Sending webhook to:', KESTRA_WEBHOOK_URL);
+      console.log('Environment:', isDevelopment ? 'development' : 'production');
       
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
