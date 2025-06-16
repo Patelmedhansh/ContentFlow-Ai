@@ -4,7 +4,11 @@ export async function handler(event) {
     /^\/\.netlify\/functions\/kestra-proxy/,
     ""
   );
-  const targetUrl = "https://ec76-2401-4900-8fc7-ff30-c939-155b-876-8e18.ngrok-free.app" + kestraPath;
+  
+  // IMPORTANT: Update this URL with your active Kestra instance
+  // Replace with your current ngrok URL or Kestra server URL
+  const KESTRA_BASE_URL = "https://your-ngrok-url.ngrok-free.app";
+  const targetUrl = KESTRA_BASE_URL + kestraPath;
 
   // CORS headers for preflight and responses
   const corsHeaders = {
@@ -52,7 +56,8 @@ export async function handler(event) {
       body: JSON.stringify({ 
         error: "Proxy error", 
         message: err.message,
-        target: targetUrl 
+        target: targetUrl,
+        note: "Please update KESTRA_BASE_URL in this function with your active Kestra instance URL"
       }),
     };
   }
