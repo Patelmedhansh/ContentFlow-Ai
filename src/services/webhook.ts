@@ -4,7 +4,7 @@ import { WorkflowPayload } from '../types';
 const isDevelopment = import.meta.env.DEV;
 const KESTRA_WEBHOOK_URL = isDevelopment 
   ? (import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'https://ec76-2401-4900-8fc7-ff30-c939-155b-876-8e18.ngrok-free.app/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key')
-  : '/.netlify/functions/kestra-proxy/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key';
+  : 'https://ubiquitous-paprenjak-47115a.netlify.app/.netlify/functions/kestra-proxy/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key';
 
 export class WebhookService {
   async sendToKestra(payload: WorkflowPayload): Promise<boolean> {
