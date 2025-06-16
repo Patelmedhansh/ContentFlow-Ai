@@ -13,9 +13,18 @@ export class WebhookService {
         body: JSON.stringify(payload),
       });
 
-      return response.ok;
+      if (!response.ok) {
+        console.error(`Webhook failed with status ${response.status}: ${response.statusText}`);
+        return false;
+      }
+
+      return true;
     } catch (error) {
-      console.error('Webhook error:', error);
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('Webhook error: Unable to connect to Kestra server. Please ensure Kestra is running and accessible at:', KESTRA_WEBHOOK_URL);
+      } else {
+        console.error('Webhook error:', error);
+      }
       return false;
     }
   }
