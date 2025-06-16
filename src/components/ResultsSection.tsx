@@ -25,7 +25,7 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
           AI-Generated Content Results
         </h2>
         <p className="text-gray-600 mb-6">
-          Review your generated content below. When you're satisfied, send it to your workflow service.
+          Review your generated content below. When you're satisfied, send it to your content automation pipeline.
         </p>
         
         <button
@@ -36,12 +36,12 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
           {isSubmittingWorkflow ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Sending to Workflow...</span>
+              <span>Publishing via automation proxy...</span>
             </>
           ) : (
             <>
               <Send className="w-5 h-5" />
-              <span>Send to Workflow Service</span>
+              <span>Send to Content Automation Pipeline</span>
             </>
           )}
         </button>

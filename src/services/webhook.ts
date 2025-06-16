@@ -1,16 +1,20 @@
 import { WorkflowPayload } from '../types';
 
-// Use Netlify function proxy in production, direct URL in development
-const isDevelopment = import.meta.env.DEV;
-const KESTRA_WEBHOOK_URL = isDevelopment 
-  ? (import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'https://ec76-2401-4900-8fc7-ff30-c939-155b-876-8e18.ngrok-free.app/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key')
-  : 'https://ubiquitous-paprenjak-47115a.netlify.app/.netlify/functions/kestra-proxy/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key';
+// Always use Netlify function proxy for webhook requests
+const KESTRA_WEBHOOK_URL = 
+  "https://ubiquitous-paprenjak-47115a.netlify.app" +
+  "/.netlify/functions/kestra-proxy" +
+  "/api/v1/executions/webhook/contentflow/contentflow-handler/from-web" +
+  "?key=contentflow-key";
 
 export class WebhookService {
   async sendToKestra(payload: WorkflowPayload): Promise<boolean> {
+    if (!KESTRA_WEBHOOK_URL) {
+      throw new Error('Webhook URL is not configured');
+    }
+
     try {
-      console.log('Sending webhook to:', KESTRA_WEBHOOK_URL);
-      console.log('Environment:', isDevelopment ? 'development' : 'production');
+      console.log('Sending webhook to automation proxy:', KESTRA_WEBHOOK_URL);
       
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
@@ -22,19 +26,28 @@ export class WebhookService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Webhook failed with status ${response.status}: ${response.statusText}`, errorText);
-        throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
+        
+        // Handle specific status codes
+        if (response.status === 404) {
+          throw new Error('Automation endpoint not found. Please check your workflow configuration.');
+        } else if (response.status === 204) {
+          console.log('Workflow skipped due to conditions');
+          return true; // 204 is actually success for conditional workflows
+        } else {
+          console.error(`Webhook failed with status ${response.status}: ${response.statusText}`, errorText);
+          throw new Error(`Automation pipeline failed: ${response.status} ${response.statusText}`);
+        }
       }
 
-      console.log('Webhook sent successfully');
+      console.log('Content sent to automation pipeline successfully');
       return true;
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        const errorMessage = `Unable to connect to Kestra server. Please ensure Kestra is running and accessible at:\n\n${KESTRA_WEBHOOK_URL}`;
+        const errorMessage = `Unable to connect to content automation pipeline. Please check your network connection and try again.`;
         console.error('Webhook error:', errorMessage);
         throw new Error(errorMessage);
       } else {
-        console.error('Webhook error:', error);
+        console.error('Automation pipeline error:', error);
         throw error;
       }
     }
