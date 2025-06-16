@@ -4,32 +4,64 @@ const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const API_BASE_URL = 'https://api.openai.com/v1/chat/completions';
 
 export class OpenAIService {
-  private async makeRequest(prompt: string): Promise<string> {
+  private async sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private async makeRequest(prompt: string, retries = 3): Promise<string> {
     if (!OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured. Please add VITE_OPENAI_API_KEY to your environment variables.');
     }
 
-    const response = await fetch(API_BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 500,
-        temperature: 0.7,
-      }),
-    });
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(API_BASE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4',
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 500,
+            temperature: 0.7,
+          }),
+        });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
+        if (!response.ok) {
+          const error = await response.json();
+          
+          // Check if it's a rate limit error
+          if (response.status === 429 && attempt < retries) {
+            // Extract wait time from error message or use exponential backoff
+            const errorMessage = error.error?.message || '';
+            const waitTimeMatch = errorMessage.match(/try again in (\d+(?:\.\d+)?)s/);
+            const waitTime = waitTimeMatch ? parseFloat(waitTimeMatch[1]) * 1000 : Math.pow(2, attempt) * 1000;
+            
+            console.log(`Rate limit hit, retrying in ${waitTime}ms (attempt ${attempt + 1}/${retries + 1})`);
+            await this.sleep(waitTime);
+            continue;
+          }
+          
+          throw new Error(`OpenAI API error: ${error.error?.message || 'Unknown error'}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0]?.message?.content || '';
+      } catch (error) {
+        if (attempt === retries) {
+          throw error;
+        }
+        
+        // For non-rate-limit errors, use exponential backoff
+        const waitTime = Math.pow(2, attempt) * 1000;
+        console.log(`Request failed, retrying in ${waitTime}ms (attempt ${attempt + 1}/${retries + 1})`);
+        await this.sleep(waitTime);
+      }
     }
 
-    const data = await response.json();
-    return data.choices[0]?.message?.content || '';
+    throw new Error('Max retries exceeded');
   }
 
   async generateSEOTitle(content: string): Promise<string> {
