@@ -56,19 +56,12 @@ function App() {
       };
 
       // Send to Kestra webhook
-      const result = await webhookService.sendToKestra(payload);
+      const webhookSuccess = await webhookService.sendToKestra(payload);
       
-      if (result.success) {
+      if (webhookSuccess) {
         setShowSuccess(true);
       } else {
-        const errorMsg = result.error || 'Failed to send content to workflow service';
-        
-        // Provide more helpful error message for connection issues
-        if (errorMsg.includes('Unable to connect to Kestra server')) {
-          setError(`${errorMsg}\n\nTo use the workflow automation feature:\n1. Set up and start your Kestra instance\n2. Configure the webhook URL in your .env file\n3. Ensure Kestra is accessible at: ${webhookService.getWebhookUrl()}`);
-        } else {
-          setError(errorMsg);
-        }
+        setError('Failed to send content to workflow service');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to send to workflow service';
@@ -88,7 +81,6 @@ function App() {
           isVisible={showResults}
           onWorkflowSubmit={handleWorkflowSubmit}
           isSubmittingWorkflow={isSubmittingWorkflow}
-          webhookConfigured={webhookService.isConfigured()}
         />
       </div>
 
