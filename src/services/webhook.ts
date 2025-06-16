@@ -1,22 +1,16 @@
 import { WorkflowPayload } from '../types';
 
-// Use environment variable for Netlify function proxy base URL, fallback to relative path for local dev
-const NETLIFY_PROXY_BASE = import.meta.env.VITE_NETLIFY_FUNCTION_PROXY_BASE_URL || '';
-
-const KESTRA_WEBHOOK_URL = 
-  NETLIFY_PROXY_BASE +
-  "/.netlify/functions/kestra-proxy" +
-  "/api/v1/executions/webhook/contentflow/contentflow-handler/from-web" +
-  "?key=contentflow-key";
+// Use Netlify function proxy in production, direct URL in development
+const isDevelopment = import.meta.env.DEV;
+const KESTRA_WEBHOOK_URL = isDevelopment 
+  ? (import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'https://ec76-2401-4900-8fc7-ff30-c939-155b-876-8e18.ngrok-free.app/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key')
+  : '/.netlify/functions/kestra-proxy/api/v1/executions/webhook/contentflow/contentflow-handler/from-web?key=contentflow-key';
 
 export class WebhookService {
   async sendToKestra(payload: WorkflowPayload): Promise<boolean> {
-    if (!KESTRA_WEBHOOK_URL) {
-      throw new Error('Webhook URL is not configured');
-    }
-
     try {
-      console.log('Sending webhook to automation proxy:', KESTRA_WEBHOOK_URL);
+      console.log('Sending webhook to:', KESTRA_WEBHOOK_URL);
+      console.log('Environment:', isDevelopment ? 'development' : 'production');
       
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
@@ -29,15 +23,21 @@ export class WebhookService {
       if (!response.ok) {
         const errorText = await response.text();
         
-        // Handle specific status codes
+        // Handle specific status codes with more detailed messages
         if (response.status === 404) {
-          throw new Error('Automation endpoint not found. Please check your workflow configuration.');
+          if (isDevelopment) {
+            throw new Error('Kestra webhook endpoint not found. Please ensure Kestra is running locally and the webhook URL is correct.');
+          } else {
+            throw new Error('Automation endpoint not found. The Netlify function proxy may not be deployed correctly.');
+          }
         } else if (response.status === 204) {
-          console.log('Workflow skipped due to conditions');
-          return true; // 204 is actually success for conditional workflows
+          console.log('Workflow completed successfully (no content returned)');
+          return true;
+        } else if (response.status === 502) {
+          throw new Error('Automation service is temporarily unavailable. Please try again later.');
         } else {
           console.error(`Webhook failed with status ${response.status}: ${response.statusText}`, errorText);
-          throw new Error(`Automation pipeline failed: ${response.status} ${response.statusText}`);
+          throw new Error(`Automation pipeline failed with status ${response.status}. Please check your configuration.`);
         }
       }
 
@@ -45,7 +45,9 @@ export class WebhookService {
       return true;
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        const errorMessage = `Unable to connect to content automation pipeline. Please check your network connection and try again.`;
+        const errorMessage = isDevelopment 
+          ? `Unable to connect to Kestra server. Please ensure Kestra is running and accessible at:\n\n${KESTRA_WEBHOOK_URL}`
+          : 'Unable to connect to content automation pipeline. Please check your network connection and try again.';
         console.error('Webhook error:', errorMessage);
         throw new Error(errorMessage);
       } else {
