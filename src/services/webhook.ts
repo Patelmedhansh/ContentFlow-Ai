@@ -2,8 +2,10 @@
 
 import { WorkflowPayload } from '../types';
 
+// Read the full proxy URL from env, or default to your Netlify function URL
 const KESTRA_WEBHOOK_URL =
   import.meta.env.VITE_KESTRA_WEBHOOK_URL ||
+  'https://ubiquitous-paprenjak-47115a.netlify.app' +
   '/.netlify/functions/kestra-proxy' +
   '/api/v1/executions/webhook/contentflow/contentflow-handler/from-web' +
   '?key=contentflow-key';
@@ -15,16 +17,12 @@ export class WebhookService {
 
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contentPayload: payload }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-
-        // Handle specific status codes
+        const text = await response.text();
         if (response.status === 404) {
           throw new Error(
             'Automation endpoint not found. Please check your workflow configuration.'
@@ -33,33 +31,27 @@ export class WebhookService {
           console.log('Workflow completed successfully (no content returned)');
           return true;
         } else if (response.status === 502) {
-          throw new Error(
-            'Automation service is temporarily unavailable. Please try again later.'
-          );
+          throw new Error('Automation service is temporarily unavailable.');
         } else {
-          console.error(
-            `Webhook failed with status ${response.status}: ${response.statusText}`,
-            errorText
-          );
+          console.error(`Kestra error ${response.status}`, text);
           throw new Error(
-            `Automation pipeline failed with status ${response.status}. Please check your configuration.`
+            `Automation pipeline failed (status ${response.status}).`
           );
         }
       }
 
       console.log('Content sent to automation pipeline successfully');
       return true;
-    } catch (error: any) {
-      // Network-level errors (e.g. DNS, CORS)
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        const errorMessage =
-          'Unable to connect to content automation pipeline. Please check your network connection and try again.';
-        console.error('Webhook error:', errorMessage);
-        throw new Error(errorMessage);
-      } else {
-        console.error('Automation pipeline error:', error);
-        throw error;
+    } catch (err: any) {
+      // Network or CORS failures
+      if (err instanceof TypeError) {
+        const msg =
+          'Unable to connect to content automation pipeline. Please check your network or proxy configuration.';
+        console.error('Webhook error:', msg);
+        throw new Error(msg);
       }
+      console.error('Automation pipeline error:', err);
+      throw err;
     }
   }
 }
