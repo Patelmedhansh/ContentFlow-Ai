@@ -3,20 +3,36 @@ import { WorkflowPayload } from '../types';
 // Use environment variable for Netlify function proxy base URL, fallback to relative path for local dev
 const NETLIFY_PROXY_BASE = import.meta.env.VITE_NETLIFY_FUNCTION_PROXY_BASE_URL || '';
 
-const KESTRA_WEBHOOK_URL = 
-  NETLIFY_PROXY_BASE +
-  "/.netlify/functions/kestra-proxy" +
-  "/api/v1/executions/webhook/contentflow/contentflow-handler/from-web" +
-  "?key=contentflow-key";
+// Determine the webhook URL based on environment
+const getWebhookUrl = () => {
+  // If Netlify proxy base URL is configured, use the proxy
+  if (NETLIFY_PROXY_BASE) {
+    return NETLIFY_PROXY_BASE +
+      "/.netlify/functions/kestra-proxy" +
+      "/api/v1/executions/webhook/contentflow/contentflow-handler/from-web" +
+      "?key=contentflow-key";
+  }
+  
+  // Otherwise, use direct Kestra webhook URL for local development
+  const directKestraUrl = import.meta.env.VITE_KESTRA_WEBHOOK_URL;
+  if (directKestraUrl) {
+    return directKestraUrl;
+  }
+  
+  // Fallback to empty string if neither is configured
+  return '';
+};
+
+const KESTRA_WEBHOOK_URL = getWebhookUrl();
 
 export class WebhookService {
   async sendToKestra(payload: WorkflowPayload): Promise<boolean> {
     if (!KESTRA_WEBHOOK_URL) {
-      throw new Error('Webhook URL is not configured');
+      throw new Error('Webhook URL is not configured. Please set either VITE_NETLIFY_FUNCTION_PROXY_BASE_URL or VITE_KESTRA_WEBHOOK_URL in your environment variables.');
     }
 
     try {
-      console.log('Sending webhook to automation proxy:', KESTRA_WEBHOOK_URL);
+      console.log('Sending webhook to automation pipeline:', KESTRA_WEBHOOK_URL);
       
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
