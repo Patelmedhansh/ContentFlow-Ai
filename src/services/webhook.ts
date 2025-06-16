@@ -1,8 +1,10 @@
 import { WorkflowPayload } from '../types';
 
-// Always use Netlify function proxy for webhook requests
+// Use environment variable for Netlify function proxy base URL, fallback to relative path for local dev
+const NETLIFY_PROXY_BASE = import.meta.env.VITE_NETLIFY_FUNCTION_PROXY_BASE_URL || '';
+
 const KESTRA_WEBHOOK_URL = 
-  "https://ubiquitous-paprenjak-47115a.netlify.app" +
+  NETLIFY_PROXY_BASE +
   "/.netlify/functions/kestra-proxy" +
   "/api/v1/executions/webhook/contentflow/contentflow-handler/from-web" +
   "?key=contentflow-key";
