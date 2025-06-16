@@ -1,6 +1,6 @@
 import { WorkflowPayload } from '../types';
 
-const KESTRA_WEBHOOK_URL = import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'http://localhost:8080/api/v1/executions/webhook/contentflow/contentflow-handler/contentflow-key';
+const KESTRA_WEBHOOK_URL = import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'https://ec76-2401-4900-8fc7-ff30-c939-155b-876-8e18.ngrok-free.app/api/v1/executions/webhook/contentflow/contentflow-handler/contentflow-key';
 
 export class WebhookService {
   async sendToKestra(payload: WorkflowPayload): Promise<boolean> {
