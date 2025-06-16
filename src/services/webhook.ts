@@ -13,13 +13,20 @@ export class WebhookService {
     }
 
     try {
+      // Add a timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorMessage = `Webhook failed with status ${response.status}: ${response.statusText}`;
@@ -31,7 +38,14 @@ export class WebhookService {
     } catch (error) {
       let errorMessage = 'Unknown error occurred';
       
-      if (error instanceof TypeError && error.message.includes('fetch')) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        errorMessage = 'Connection to Kestra webhook timed out. This usually means:\n\n' +
+          '• The Kestra server is not responding\n' +
+          '• The webhook URL is incorrect or expired\n' +
+          '• Network connectivity issues\n\n' +
+          `Current webhook URL: ${KESTRA_WEBHOOK_URL}\n\n` +
+          'Please verify your Kestra setup and update the VITE_KESTRA_WEBHOOK_URL in your .env file.';
+      } else if (error instanceof TypeError && error.message.includes('fetch')) {
         errorMessage = 'Unable to connect to Kestra webhook. This usually means:\n\n' +
           '• The Kestra server is not running\n' +
           '• The webhook URL has expired (if using ngrok)\n' +
@@ -40,7 +54,12 @@ export class WebhookService {
           `Current webhook URL: ${KESTRA_WEBHOOK_URL}\n\n` +
           'Please verify your Kestra setup and update the VITE_KESTRA_WEBHOOK_URL in your .env file if needed.';
       } else if (error instanceof Error) {
-        errorMessage = error.message;
+        errorMessage = `Connection failed: ${error.message}\n\n` +
+          'This typically indicates a network or server issue. Please check:\n' +
+          '• Kestra server is running and accessible\n' +
+          '• Webhook URL is correct and active\n' +
+          '• No firewall or network restrictions\n\n' +
+          `Current webhook URL: ${KESTRA_WEBHOOK_URL}`;
       }
       
       console.error('Webhook error:', error);
