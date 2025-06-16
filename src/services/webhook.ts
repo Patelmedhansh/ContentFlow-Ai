@@ -1,9 +1,17 @@
 import { WorkflowPayload } from '../types';
 
-const KESTRA_WEBHOOK_URL = import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'https://ec76-2401-4900-8fc7-ff30-c939-155b-876-8e18.ngrok-free.app/api/v1/executions/webhook/contentflow/contentflow-handler/contentflow-key';
+const KESTRA_WEBHOOK_URL = import.meta.env.VITE_KESTRA_WEBHOOK_URL || '';
 
 export class WebhookService {
   async sendToKestra(payload: WorkflowPayload): Promise<{ success: boolean; error?: string }> {
+    // Check if webhook URL is configured
+    if (!KESTRA_WEBHOOK_URL) {
+      return { 
+        success: false, 
+        error: 'Webhook URL not configured. Please set VITE_KESTRA_WEBHOOK_URL in your .env file.' 
+      };
+    }
+
     try {
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
@@ -24,7 +32,13 @@ export class WebhookService {
       let errorMessage = 'Unknown error occurred';
       
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        errorMessage = 'Unable to connect to Kestra server. Please ensure Kestra is running and accessible, or check your network connection.';
+        errorMessage = 'Unable to connect to Kestra webhook. This usually means:\n\n' +
+          '• The Kestra server is not running\n' +
+          '• The webhook URL has expired (if using ngrok)\n' +
+          '• Network connectivity issues\n' +
+          '• CORS is not properly configured on the Kestra server\n\n' +
+          `Current webhook URL: ${KESTRA_WEBHOOK_URL}\n\n` +
+          'Please verify your Kestra setup and update the VITE_KESTRA_WEBHOOK_URL in your .env file if needed.';
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
@@ -35,7 +49,7 @@ export class WebhookService {
   }
 
   isConfigured(): boolean {
-    return !!import.meta.env.VITE_KESTRA_WEBHOOK_URL;
+    return !!KESTRA_WEBHOOK_URL && KESTRA_WEBHOOK_URL.trim() !== '';
   }
 
   getWebhookUrl(): string {
