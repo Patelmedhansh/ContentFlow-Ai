@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, FileText, Share2, MessageSquare } from 'lucide-react';
+import { Search, FileText, Share2, MessageSquare, Copy } from 'lucide-react';
 import { ContentResult } from '../types';
 import { ResultCard } from './ResultCard';
 
