@@ -5,6 +5,8 @@ const KESTRA_WEBHOOK_URL = import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'https://e
 export class WebhookService {
   async sendToKestra(payload: WorkflowPayload): Promise<boolean> {
     try {
+      console.log('Sending webhook to:', KESTRA_WEBHOOK_URL);
+      
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
         headers: {
@@ -14,18 +16,22 @@ export class WebhookService {
       });
 
       if (!response.ok) {
-        console.error(`Webhook failed with status ${response.status}: ${response.statusText}`);
-        return false;
+        const errorText = await response.text();
+        console.error(`Webhook failed with status ${response.status}: ${response.statusText}`, errorText);
+        throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
       }
 
+      console.log('Webhook sent successfully');
       return true;
     } catch (error) {
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.error('Webhook error: Unable to connect to Kestra server. Please ensure Kestra is running and accessible at:', KESTRA_WEBHOOK_URL);
+        const errorMessage = `Unable to connect to Kestra server. Please ensure Kestra is running and accessible at:\n\n${KESTRA_WEBHOOK_URL}`;
+        console.error('Webhook error:', errorMessage);
+        throw new Error(errorMessage);
       } else {
         console.error('Webhook error:', error);
+        throw error;
       }
-      return false;
     }
   }
 }
