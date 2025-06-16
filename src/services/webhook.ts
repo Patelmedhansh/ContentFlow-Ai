@@ -3,7 +3,7 @@ import { WorkflowPayload } from '../types';
 const KESTRA_WEBHOOK_URL = import.meta.env.VITE_KESTRA_WEBHOOK_URL || 'http://localhost:8080/api/v1/executions/webhook/contentflow/contentflow-handler/contentflow-key';
 
 export class WebhookService {
-  async sendToKestra(payload: WorkflowPayload): Promise<boolean> {
+  async sendToKestra(payload: WorkflowPayload): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch(KESTRA_WEBHOOK_URL, {
         method: 'POST',
@@ -14,19 +14,32 @@ export class WebhookService {
       });
 
       if (!response.ok) {
-        console.error(`Webhook failed with status ${response.status}: ${response.statusText}`);
-        return false;
+        const errorMessage = `Webhook failed with status ${response.status}: ${response.statusText}`;
+        console.error(errorMessage);
+        return { success: false, error: errorMessage };
       }
 
-      return true;
+      return { success: true };
     } catch (error) {
+      let errorMessage = 'Unknown error occurred';
+      
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.error('Webhook error: Unable to connect to Kestra server. Please ensure Kestra is running and accessible at:', KESTRA_WEBHOOK_URL);
-      } else {
-        console.error('Webhook error:', error);
+        errorMessage = 'Unable to connect to Kestra server. Please ensure Kestra is running and accessible, or check your network connection.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
       }
-      return false;
+      
+      console.error('Webhook error:', error);
+      return { success: false, error: errorMessage };
     }
+  }
+
+  isConfigured(): boolean {
+    return !!import.meta.env.VITE_KESTRA_WEBHOOK_URL;
+  }
+
+  getWebhookUrl(): string {
+    return KESTRA_WEBHOOK_URL;
   }
 }
 
