@@ -11,39 +11,25 @@ import { ContentResult, ToneType, WorkflowPayload } from './types';
 function App() {
   const [results, setResults] = useState<ContentResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmittingWorkflow, setIsSubmittingWorkflow] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [originalContent, setOriginalContent] = useState('');
+  const [selectedTone, setSelectedTone] = useState<ToneType>('professional');
 
   const handleContentSubmit = async (content: string, tone: ToneType) => {
     setIsLoading(true);
     setError(null);
     setShowResults(false);
+    setOriginalContent(content);
+    setSelectedTone(tone);
 
     try {
       // Generate AI content
       const contentResult = await openaiService.processContent(content, tone);
       setResults(contentResult);
       setShowResults(true);
-
-      // Prepare webhook payload
-      const payload: WorkflowPayload = {
-        title: contentResult.seoTitle,
-        meta: contentResult.metaDescription,
-        summary: contentResult.summary,
-        posts: contentResult.socialPosts,
-        original: content,
-        tone: tone,
-      };
-
-      // Send to Kestra webhook
-      const webhookSuccess = await webhookService.sendToKestra(payload);
-      
-      if (webhookSuccess) {
-        setShowSuccess(true);
-      } else {
-        setError('Content generated successfully, but failed to send to workflow service');
-      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(errorMessage);
@@ -52,12 +38,50 @@ function App() {
     }
   };
 
+  const handleWorkflowSubmit = async () => {
+    if (!results) return;
+
+    setIsSubmittingWorkflow(true);
+    setError(null);
+
+    try {
+      // Prepare webhook payload
+      const payload: WorkflowPayload = {
+        title: results.seoTitle,
+        meta: results.metaDescription,
+        summary: results.summary,
+        posts: results.socialPosts,
+        original: originalContent,
+        tone: selectedTone,
+      };
+
+      // Send to Kestra webhook
+      const webhookSuccess = await webhookService.sendToKestra(payload);
+      
+      if (webhookSuccess) {
+        setShowSuccess(true);
+      } else {
+        setError('Failed to send content to workflow service');
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send to workflow service';
+      setError(errorMessage);
+    } finally {
+      setIsSubmittingWorkflow(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-8">
         <Header />
         <ContentForm onSubmit={handleContentSubmit} isLoading={isLoading} />
-        <ResultsSection results={results} isVisible={showResults} />
+        <ResultsSection 
+          results={results} 
+          isVisible={showResults}
+          onWorkflowSubmit={handleWorkflowSubmit}
+          isSubmittingWorkflow={isSubmittingWorkflow}
+        />
       </div>
 
       <SuccessAlert 
