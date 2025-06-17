@@ -8,16 +8,31 @@ export interface ContentResult {
   };
 }
 
-export interface WorkflowPayload {
+export interface BlogPost {
   title: string;
   meta: string;
   summary: string[];
-  posts: {
+  socialPosts: {
     twitter: string;
     linkedin: string;
   };
-  original: string;
-  tone: string;
+  content: string;
+  tags: string[];
+  coverImage?: string;
+  slug: string;
+  date: string;
+}
+
+export interface MarkdownPreview {
+  frontmatter: string;
+  content: string;
+  fullMarkdown: string;
 }
 
 export type ToneType = 'professional' | 'witty' | 'technical';
+
+export interface GitHubCommitResponse {
+  success: boolean;
+  url?: string;
+  error?: string;
+}

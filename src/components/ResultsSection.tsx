@@ -1,20 +1,16 @@
 import React from 'react';
-import { Search, FileText, Share2, MessageSquare, Copy, Send, Loader2 } from 'lucide-react';
+import { Search, FileText, Share2, MessageSquare, Copy } from 'lucide-react';
 import { ContentResult } from '../types';
 import { ResultCard } from './ResultCard';
 
 interface ResultsSectionProps {
   results: ContentResult | null;
   isVisible: boolean;
-  onWorkflowSubmit: () => void;
-  isSubmittingWorkflow: boolean;
 }
 
 export const ResultsSection: React.FC<ResultsSectionProps> = ({ 
   results, 
-  isVisible, 
-  onWorkflowSubmit,
-  isSubmittingWorkflow 
+  isVisible
 }) => {
   if (!results || !isVisible) return null;
 
@@ -24,27 +20,9 @@ export const ResultsSection: React.FC<ResultsSectionProps> = ({
         <h2 className="text-2xl font-bold text-gray-800 mb-4">
           AI-Generated Content Results
         </h2>
-        <p className="text-gray-600 mb-6">
-          Review your generated content below. When you're satisfied, send it to your content automation pipeline.
+        <p className="text-gray-600">
+          Review your generated content below. When satisfied, proceed to customize and publish your blog post.
         </p>
-        
-        <button
-          onClick={onWorkflowSubmit}
-          disabled={isSubmittingWorkflow}
-          className="bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-8 rounded-lg font-semibold flex items-center justify-center space-x-2 hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl mx-auto"
-        >
-          {isSubmittingWorkflow ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Publishing via automation proxy...</span>
-            </>
-          ) : (
-            <>
-              <Send className="w-5 h-5" />
-              <span>Send to Content Automation Pipeline</span>
-            </>
-          )}
-        </button>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
